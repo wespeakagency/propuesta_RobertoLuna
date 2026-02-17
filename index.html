@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es" class="dark">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://picsum.photos/32/32" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Estrategia Roberto Luna</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -27,20 +29,45 @@
         }
       }
     </script>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+
+    <!-- Dependencies (React, Babel, Framer Motion, Lucide) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
       body {
         font-family: 'Montserrat', sans-serif;
         background-color: #09090b;
         color: #f4f4f5;
-        overflow: hidden;
+        overflow-x: hidden; /* Prevent horizontal scroll */
       }
-      /* Hide scrollbar */
+      /* Hide scrollbar but allow functionality */
       ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
+        width: 4px;
+        height: 4px;
+        background: #09090b;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #27272a; 
+        border-radius: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05); 
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.3); 
+        border-radius: 10px;
       }
       .glass-panel {
         background: rgba(255, 255, 255, 0.03);
@@ -48,25 +75,935 @@
         -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.05);
       }
-      .glass-panel-hover:hover {
-        background: rgba(255, 255, 255, 0.07);
-        border-color: rgba(255, 255, 255, 0.1);
+      .perspective-1000 {
+        perspective: 1000px;
       }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
     "framer-motion": "https://esm.sh/framer-motion@^12.34.1",
     "lucide-react": "https://esm.sh/lucide-react@^0.574.0"
   }
 }
 </script>
 </head>
-  <body>
+<body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+    <script type="text/babel" data-presets="react,typescript">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- LUCIDE ICONS WRAPPER ---
+        const LucideIcons = Object.fromEntries(
+            Object.entries(lucide.icons).map(([key, iconNode]) => {
+                const PascalName = key.charAt(0).toUpperCase() + key.slice(1);
+                const Component = ({ color = "currentColor", size = 24, strokeWidth = 2, className, ...props }) => {
+                    return React.createElement(
+                        "svg",
+                        {
+                            ...props,
+                            width: size,
+                            height: size,
+                            stroke: color,
+                            strokeWidth: strokeWidth,
+                            className: className,
+                            viewBox: "0 0 24 24",
+                            fill: "none",
+                            strokeLinecap: "round",
+                            strokeLinejoin: "round",
+                            xmlns: "http://www.w3.org/2000/svg"
+                        },
+                        ...iconNode.map(([tag, attrs]) => React.createElement(tag, attrs))
+                    );
+                };
+                return [PascalName, Component];
+            })
+        );
+        
+        const { 
+            ChevronDown, ChevronUp, ArrowRight, PenTool, Sword, Globe, BookOpen, 
+            Mail, Mic, MessageSquare, Video, Database, Layers, Users, Zap, 
+            ChevronRight, Brain, Target, RefreshCcw, Copy, Check, Thermometer, 
+            Activity, Terminal, Feather 
+        } = LucideIcons;
+
+
+        // --- TYPES ---
+        
+        enum Market {
+          LATAM = 'LATAM',
+          EN = 'EN',
+          INDIA = 'INDIA',
+          CHINA = 'CHINA',
+        }
+
+        // --- HOOKS ---
+        
+        function useIsMobile() {
+            const [isMobile, setIsMobile] = useState(false);
+            useEffect(() => {
+                const check = () => setIsMobile(window.innerWidth < 768);
+                check();
+                window.addEventListener('resize', check);
+                return () => window.removeEventListener('resize', check);
+            }, []);
+            return isMobile;
+        }
+
+        // --- COMPONENTS ---
+
+        const SlideContainer = ({ children, isActive, isMobile, className = "" }) => {
+          if (isMobile) {
+              return (
+                <div className={`relative w-full min-h-screen flex flex-col items-center justify-center py-20 px-6 border-b border-zinc-900 bg-luxury-black ${className}`}>
+                     {/* Background Texture Mobile */}
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0 mix-blend-overlay" 
+                         style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}} 
+                    />
+                    <div className="relative z-10 w-full flex flex-col items-center justify-center">
+                        {children}
+                    </div>
+                </div>
+              );
+          }
+
+          // Desktop Logic
+          return (
+            <AnimatePresence mode='wait'>
+              {isActive && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, scale: 1.02, filter: "blur(4px)" }}
+                  transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                  className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center p-6 md:p-12 overflow-hidden bg-luxury-black text-white ${className}`}
+                >
+                  {/* Subtle Noise Texture Overlay */}
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0 mix-blend-overlay" 
+                       style={{backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}} 
+                  />
+                  
+                  <div className="relative z-10 w-full h-full flex flex-col items-center justify-center">
+                    {children}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          );
+        };
+
+        // --- SLIDES ---
+
+        const IntroSlide = ({ isActive, isMobile, onNext }) => {
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-7xl w-full flex flex-col items-start justify-center h-full relative">
+                
+                {/* Top Label */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="h-[1px] w-12 bg-luxury-gold/50"></div>
+                  <span className="text-xs font-bold tracking-[0.3em] uppercase text-luxury-gold">Estrategia de Marca</span>
+                </div>
+
+                {/* Main Title */}
+                <div className="relative z-10">
+                  <h1 className="text-5xl md:text-9xl font-black tracking-tighter leading-[0.9] mb-4 text-transparent bg-clip-text bg-gradient-to-br from-white via-zinc-200 to-zinc-600">
+                    LA PLUMA
+                  </h1>
+                  <h1 className="text-5xl md:text-9xl font-thin tracking-tighter leading-[0.9] text-white flex flex-wrap items-center gap-2 md:gap-4">
+                    <span className="font-serif italic text-4xl md:text-7xl opacity-50">de</span> LUNA
+                  </h1>
+                </div>
+
+                {/* Subtitle / Description */}
+                <div className="mt-12 max-w-xl border-l border-zinc-800 pl-8 ml-2">
+                  <p className="text-base md:text-xl font-light text-zinc-400 leading-relaxed">
+                    Cómo convertir <strong className="text-white font-semibold">Negociando Bonito</strong> en un estándar cultural sin depender del performance constante.
+                  </p>
+                  <p className="text-sm mt-4 text-zinc-500 uppercase tracking-widest">
+                    Brand Strategy Deck v1.0
+                  </p>
+                </div>
+
+                {/* Decorative Circle (Desktop Only to prevent Mobile overlap issues) */}
+                {!isMobile && (
+                  <>
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] rounded-full border border-zinc-800 opacity-20 pointer-events-none" />
+                    <div className="absolute right-20 top-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[400px] md:h-[400px] rounded-full bg-gradient-to-tr from-luxury-gold/10 to-transparent blur-3xl pointer-events-none" />
+                  </>
+                )}
+
+                {!isMobile && (
+                  <button 
+                    onClick={onNext}
+                    className="absolute bottom-12 right-0 group flex items-center gap-4 text-sm font-bold tracking-widest uppercase text-white hover:text-luxury-gold transition-colors"
+                  >
+                    Iniciar
+                    <div className="p-3 border border-zinc-800 rounded-full group-hover:border-luxury-gold transition-colors">
+                       <ChevronDown size={20} />
+                    </div>
+                  </button>
+                )}
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        const BigIdeaSlide = ({ isActive, isMobile }) => {
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+                
+                {/* Text Side */}
+                <div className="space-y-8 md:space-y-10 order-2 md:order-1">
+                  <div className="space-y-2">
+                    <span className="text-luxury-gold text-xs font-bold tracking-widest uppercase">El Core Concept</span>
+                    <h2 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
+                      Negociar es <span className="font-serif italic font-normal text-zinc-400">arte</span>, <br/>
+                      no guerra.
+                    </h2>
+                  </div>
+                  
+                  <p className="text-base md:text-lg text-zinc-400 font-light leading-relaxed">
+                    El mercado está saturado de "Lobos de Wall Street". Tu propuesta es disruptiva por su elegancia: 
+                    planteas que la <span className="text-white font-medium">escucha y la empatía</span> son armas más letales que la agresión.
+                  </p>
+
+                  <div className="glass-panel p-6 rounded-r-2xl border-l-4 border-l-luxury-gold">
+                    <h3 className="text-lg font-bold text-white mb-2">Traducción Estratégica</h3>
+                    <p className="text-zinc-400 text-sm">
+                      Construir una <strong>biblioteca viva de herramientas</strong>. No buscamos views vacíos, buscamos que la gente guarde el post porque lo necesita para sobrevivir el lunes en la oficina.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Visual Side */}
+                <div className={`relative w-full glass-panel rounded-2xl flex flex-col items-center justify-center p-8 overflow-hidden order-1 md:order-2 ${isMobile ? 'h-[350px]' : 'h-[500px]'}`}>
+                  
+                  {/* Background Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/50 to-zinc-950 opacity-80" />
+                  
+                  <div className="relative z-10 flex items-center justify-around w-full">
+                    
+                    {/* The Old Way */}
+                    <div className="flex flex-col items-center group opacity-60">
+                      <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border border-zinc-800 bg-zinc-900 flex items-center justify-center mb-6">
+                        <Sword size={24} className="text-zinc-600" />
+                      </div>
+                      <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs md:text-sm line-through decoration-zinc-700">Guerra</p>
+                    </div>
+
+                    <div className="h-24 w-[1px] bg-zinc-800"></div>
+
+                    {/* The New Way */}
+                    <div className="flex flex-col items-center scale-110">
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-tr from-luxury-gold to-yellow-200 shadow-[0_0_30px_rgba(212,175,55,0.3)] flex items-center justify-center mb-6 text-black">
+                        <PenTool size={32} strokeWidth={1.5} className="md:w-10 md:h-10" />
+                      </div>
+                      <p className="text-white font-serif italic text-xl md:text-2xl">Arte & Cuidado</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-12 text-center max-w-xs relative z-10">
+                    <p className="text-[10px] md:text-xs text-zinc-500 font-mono border border-zinc-800 rounded-full px-4 py-2 bg-zinc-950/50">
+                      return new Standard("Negociando Bonito");
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        const BrandSlide = ({ isActive, isMobile }) => {
+          const [activeBrand, setActiveBrand] = useState('ES');
+
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-6xl w-full flex flex-col items-center">
+                
+                <div className="text-center mb-12">
+                  <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">Arquitectura de Marca</h2>
+                  <p className="text-zinc-400 font-light max-w-2xl mx-auto text-base md:text-lg">
+                    Separamos al autor del sello. Creamos una entidad editorial que escala sola.
+                  </p>
+                </div>
+
+                {/* Toggle */}
+                <div className="flex bg-zinc-900/50 p-1 rounded-full border border-zinc-800 mb-12 backdrop-blur-sm">
+                    <button 
+                        onClick={() => setActiveBrand('ES')}
+                        className={`px-6 md:px-8 py-2 md:py-3 rounded-full text-xs md:text-sm font-bold tracking-widest transition-all ${activeBrand === 'ES' ? 'bg-zinc-100 text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        LATAM
+                    </button>
+                    <button 
+                        onClick={() => setActiveBrand('EN')}
+                        className={`px-6 md:px-8 py-2 md:py-3 rounded-full text-xs md:text-sm font-bold tracking-widest transition-all ${activeBrand === 'EN' ? 'bg-zinc-100 text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}
+                    >
+                        GLOBAL
+                    </button>
+                </div>
+
+                {/* 3D Card Area - Simplified for Mobile */}
+                <div className={`relative w-full max-w-xl ${isMobile ? 'h-auto min-h-[300px]' : 'h-[350px] perspective-1000'}`}>
+                   <AnimatePresence mode='wait'>
+                     <motion.div
+                        key={activeBrand}
+                        initial={isMobile ? { opacity: 0 } : { rotateY: 90, opacity: 0 }}
+                        animate={isMobile ? { opacity: 1 } : { rotateY: 0, opacity: 1 }}
+                        exit={isMobile ? { opacity: 0 } : { rotateY: -90, opacity: 0 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className={`w-full h-full ${isMobile ? 'relative' : 'absolute inset-0'} glass-panel rounded-3xl border border-zinc-700/50 flex flex-col items-center justify-center p-8 md:p-10 text-center shadow-2xl bg-gradient-to-b from-zinc-800/50 to-black`}
+                     >
+                        <div className="absolute top-6 right-6 opacity-20">
+                            {activeBrand === 'ES' ? <BookOpen size={isMobile ? 30 : 40} /> : <Globe size={isMobile ? 30 : 40} />}
+                        </div>
+
+                        <h3 className="font-serif italic text-5xl md:text-7xl mb-4 text-white bg-clip-text">
+                            {activeBrand === 'ES' ? 'La Pluma' : 'Luna Ink'}
+                        </h3>
+                        
+                        <div className="w-12 h-[2px] bg-luxury-gold my-6"></div>
+
+                        <p className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-zinc-500 mb-6">
+                            {activeBrand === 'ES' ? 'by Roberto Luna' : 'International Edition'}
+                        </p>
+                        <div className="text-base md:text-lg text-zinc-300 leading-relaxed font-light">
+                            {activeBrand === 'ES' 
+                                ? '"Una línea editorial profunda que deja clara la autoría, sin obligarte a ser un showman perpetuo."'
+                                : '"Breve, táctico y listo para escalar. La firma secundaria para mercados de alto contexto."'
+                            }
+                        </div>
+                     </motion.div>
+                   </AnimatePresence>
+                </div>
+
+                {/* Footer Info */}
+                <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl">
+                     <div className="glass-panel p-6 rounded-xl border-l-2 border-zinc-600 hover:border-luxury-gold transition-colors group">
+                        <h4 className="font-bold mb-2 text-xs uppercase tracking-widest text-zinc-500 group-hover:text-white">Formato</h4>
+                        <p className="text-sm text-zinc-400">Pilares exportables vs Clips infinitos. Empaquetamos sabiduría, no tendencias.</p>
+                     </div>
+                     <div className="glass-panel p-6 rounded-xl border-l-2 border-zinc-600 hover:border-luxury-gold transition-colors group">
+                        <h4 className="font-bold mb-2 text-xs uppercase tracking-widest text-zinc-500 group-hover:text-white">Video Strategy</h4>
+                        <p className="text-sm text-zinc-400">1-3 min por capítulo. Scripts visuales y voz en off. No requiere tu cara 24/7.</p>
+                     </div>
+                </div>
+
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        const SystemSlide = ({ isActive, isMobile }) => {
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-7xl w-full h-full flex flex-col justify-center items-center">
+                
+                <div className="text-center mb-10 md:mb-16 relative z-10">
+                  <h2 className="text-3xl md:text-4xl font-bold mb-2">Sistema Nervioso Central</h2>
+                  <p className="text-zinc-500 font-mono text-xs md:text-sm">Repositorio Maestro v1.0 -> Substack Core</p>
+                </div>
+
+                <div className={`relative w-full max-w-4xl flex items-center justify-center ${isMobile ? 'flex-col gap-8 h-auto' : 'h-[500px]'}`}>
+                  
+                  {/* Orbital Rings - Desktop Only */}
+                  {!isMobile && (
+                    <>
+                        <div className="absolute w-[300px] h-[300px] rounded-full border border-zinc-800/50 animate-[spin_20s_linear_infinite]" />
+                        <div className="absolute w-[500px] h-[500px] rounded-full border border-zinc-900 border-dashed animate-[spin_40s_linear_infinite_reverse]" />
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+                            <line x1="50%" y1="50%" x2="20%" y2="20%" stroke="white" strokeWidth="1" />
+                            <line x1="50%" y1="50%" x2="80%" y2="20%" stroke="white" strokeWidth="1" />
+                            <line x1="50%" y1="50%" x2="20%" y2="80%" stroke="white" strokeWidth="1" />
+                            <line x1="50%" y1="50%" x2="80%" y2="80%" stroke="white" strokeWidth="1" />
+                        </svg>
+                    </>
+                  )}
+
+                  {/* Core Nucleus */}
+                  <div className={`relative z-20 rounded-full bg-black border border-zinc-700 shadow-[0_0_50px_rgba(255,255,255,0.1)] flex flex-col items-center justify-center z-10 ${isMobile ? 'w-32 h-32 mb-4' : 'w-40 h-40'}`}>
+                    <Database size={isMobile ? 24 : 32} className="text-luxury-gold mb-2" />
+                    <span className="font-bold text-white tracking-widest text-sm">CORE</span>
+                    <span className="text-[10px] text-zinc-500 uppercase mt-1">Substack</span>
+                  </div>
+
+                  {/* Mobile Stacked View vs Desktop Absolute */}
+                  {isMobile ? (
+                      <div className="w-full grid grid-cols-1 gap-4">
+                           {/* Cards Stacked for Mobile */}
+                           {[
+                               { color: 'emerald', icon: Mail, title: 'Distribución', text: 'Formato largo, ensayos y guías profundas.' },
+                               { color: 'purple', icon: Mic, title: 'Audio', text: 'La voz del libro. Contenido íntimo.' },
+                               { color: 'blue', icon: MessageSquare, title: 'Micro', text: 'Substack Notes. Micro-scripts diarios.' },
+                               { color: 'red', icon: Video, title: 'Social', text: 'Shorts, quotes, carruseles.' },
+                           ].map((item, i) => (
+                               <div key={i} className={`glass-panel p-4 rounded-lg border-l-2 border-${item.color}-500 w-full`}>
+                                   <div className={`flex items-center gap-2 mb-2 text-${item.color}-400`}>
+                                       <item.icon size={16} /> <span className="text-xs font-bold uppercase">{item.title}</span>
+                                   </div>
+                                   <p className="text-xs text-zinc-400 leading-relaxed">{item.text}</p>
+                               </div>
+                           ))}
+                      </div>
+                  ) : (
+                      <>
+                          {/* Top Left */}
+                          <motion.div initial={{opacity:0, x: -20, y:-20}} animate={{opacity:1, x:0, y:0}} transition={{delay: 0.2}} className="absolute top-[10%] left-[10%] md:left-[20%] glass-panel p-4 rounded-lg border-l-2 border-emerald-500 w-48 hover:bg-zinc-900 transition-colors cursor-default">
+                             <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                                <Mail size={16} /> <span className="text-xs font-bold uppercase">Distribución</span>
+                             </div>
+                             <p className="text-[10px] text-zinc-400 leading-relaxed">Formato largo, ensayos y guías profundas. La bandeja de entrada es sagrada.</p>
+                          </motion.div>
+
+                          {/* Top Right */}
+                          <motion.div initial={{opacity:0, x: 20, y:-20}} animate={{opacity:1, x:0, y:0}} transition={{delay: 0.3}} className="absolute top-[10%] right-[10%] md:right-[20%] glass-panel p-4 rounded-lg border-l-2 border-purple-500 w-48 hover:bg-zinc-900 transition-colors cursor-default">
+                             <div className="flex items-center gap-2 mb-2 text-purple-400">
+                                <Mic size={16} /> <span className="text-xs font-bold uppercase">Audio</span>
+                             </div>
+                             <p className="text-[10px] text-zinc-400 leading-relaxed">La voz del libro. Contenido íntimo y "premium". Fragmentos de realidad.</p>
+                          </motion.div>
+
+                          {/* Bottom Left */}
+                          <motion.div initial={{opacity:0, x: -20, y:20}} animate={{opacity:1, x:0, y:0}} transition={{delay: 0.4}} className="absolute bottom-[10%] left-[10%] md:left-[20%] glass-panel p-4 rounded-lg border-l-2 border-blue-500 w-48 hover:bg-zinc-900 transition-colors cursor-default">
+                             <div className="flex items-center gap-2 mb-2 text-blue-400">
+                                <MessageSquare size={16} /> <span className="text-xs font-bold uppercase">Micro</span>
+                             </div>
+                             <p className="text-[10px] text-zinc-400 leading-relaxed">Substack Notes. Micro-scripts diarios y preguntas a la comunidad.</p>
+                          </motion.div>
+
+                          {/* Bottom Right */}
+                          <motion.div initial={{opacity:0, x: 20, y:20}} animate={{opacity:1, x:0, y:0}} transition={{delay: 0.5}} className="absolute bottom-[10%] right-[10%] md:right-[20%] glass-panel p-4 rounded-lg border-l-2 border-red-500 w-48 hover:bg-zinc-900 transition-colors cursor-default">
+                             <div className="flex items-center gap-2 mb-2 text-red-400">
+                                <Video size={16} /> <span className="text-xs font-bold uppercase">Social</span>
+                             </div>
+                             <p className="text-[10px] text-zinc-400 leading-relaxed">Shorts, quotes, carruseles. Redes como motor de descubrimiento.</p>
+                          </motion.div>
+                      </>
+                  )}
+
+                </div>
+
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        const STRATEGIES = {
+          [Market.LATAM]: {
+            id: Market.LATAM,
+            title: "Mercado LATAM",
+            flag: "LATAM",
+            subtitle: "El Amigo Experto",
+            culturalUnlock: "El Miedo a 'Caer Mal'",
+            psychology: "En nuestra cultura, el conflicto se equipara a una ruptura afectiva. Existe una parálisis por miedo a ser percibido como 'ambicioso' o 'agresivo'. La marca debe funcionar como un permiso moral: 'Cobrar lo justo no te hace mala persona'.",
+            platformEcology: {
+              primary: "Instagram (Escaparate)",
+              secondary: "WhatsApp (Cierre)",
+              format: "Carruseles + Audios"
+            },
+            contentArchetype: "Consultorio Sentimentaloide",
+            voice: "Cálida, Empática, pero con 'Calle'.",
+            tactics: [
+              "Screenshots Reales: Analizar chats tóxicos.",
+              "Audios de WhatsApp: Simular límites.",
+              "Stickers de Poder: Packs para cobrar."
+            ],
+            growthHack: "Viralidad por Trauma Compartido",
+            example: "No es por el dinero, es por lo que construimos."
+          },
+          [Market.EN]: {
+            id: Market.EN,
+            title: "Mercado Anglo",
+            flag: "USA/UK",
+            subtitle: "The Tactical Guide",
+            culturalUnlock: "Time is Money (ROI)",
+            psychology: "Cultura de bajo contexto. No buscan validación emocional, buscan la frase exacta que desbloquee valor. Odian el 'fluff'.",
+            platformEcology: {
+              primary: "LinkedIn (Validación)",
+              secondary: "Substack (Liderazgo)",
+              format: "Text-only Posts, Frameworks"
+            },
+            contentArchetype: "The Operator",
+            voice: "Quirúrgica, Directa, Data-Driven.",
+            tactics: [
+              "Templates de Email: Refuse a meeting.",
+              "Decision Trees: Diagramas de flujo.",
+              "Salary Negotiation Scripts."
+            ],
+            growthHack: "Guest Posting en Newsletters Técnicos",
+            example: "Let's align on value before price."
+          },
+          [Market.INDIA]: {
+            id: Market.INDIA,
+            title: "Mercado India",
+            flag: "INDIA",
+            subtitle: "The Modern Mentor",
+            culturalUnlock: "Aspiración y Jerarquía",
+            psychology: "Una juventud ambiciosa navegando jerarquías. El inglés es la lengua del éxito, pero el 'Hinglish' la de confianza.",
+            platformEcology: {
+              primary: "YouTube Shorts",
+              secondary: "Telegram Groups",
+              format: "Skits, Subtítulos Dobles"
+            },
+            contentArchetype: "Bhaiya/Didi (Hermano Mayor)",
+            voice: "Inspiracional, 'Tough Love'.",
+            tactics: [
+              "Roleplay Videos: 'Desi' vs 'Pro'.",
+              "Vocabulary Upgrades.",
+              "Interview Prep."
+            ],
+            growthHack: "Infiltración en grupos de estudiantes",
+            example: "Respectfully assert boundaries."
+          },
+          [Market.CHINA]: {
+            id: Market.CHINA,
+            title: "Mercado China",
+            flag: "CHINA",
+            subtitle: "The Invisible Sage",
+            culturalUnlock: "Mianzi (Face / Honor)",
+            psychology: "La confrontación directa es un error. Se trata de preservar la 'cara'. Estrategia indirecta y sutil.",
+            platformEcology: {
+              primary: "Xiaohongshu",
+              secondary: "WeChat Official",
+              format: "Tarjetas Poster, Voz en Off"
+            },
+            contentArchetype: "El Estratega",
+            voice: "Poética, Metafórica, Serena.",
+            tactics: [
+              "Golden Sentences.",
+              "Office Politics survival.",
+              "Private Domain Traffic."
+            ],
+            growthHack: "KOCs en Xiaohongshu",
+            example: "The Sandwich Method."
+          }
+        };
+
+        const GlobalSlide = ({ isActive, isMobile }) => {
+          const [activeMarket, setActiveMarket] = useState(Market.LATAM);
+
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className={`flex w-full h-full max-w-7xl gap-8 ${isMobile ? 'flex-col' : 'flex-row'}`}>
+                
+                {/* Sidebar / Top Nav */}
+                <div className={`flex ${isMobile ? 'flex-row overflow-x-auto pb-4 gap-2 border-b border-zinc-800' : 'w-1/4 flex-col space-y-2 pr-4 border-r border-zinc-800/50 overflow-y-auto custom-scrollbar'}`}>
+                  {!isMobile && (
+                      <div className="mb-8 pl-2">
+                        <h2 className="text-3xl font-bold text-white tracking-tight">Expansión<br/><span className="text-zinc-500">Global</span></h2>
+                        <div className="h-1 w-10 bg-luxury-gold mt-4 mb-2"></div>
+                      </div>
+                  )}
+                  
+                  {Object.values(STRATEGIES).map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setActiveMarket(s.id)}
+                      className={`
+                          transition-all duration-300 group flex items-center
+                          ${isMobile 
+                              ? `flex-shrink-0 px-4 py-2 rounded-full border text-xs whitespace-nowrap ${activeMarket === s.id ? 'bg-luxury-gold text-black border-luxury-gold font-bold' : 'bg-transparent border-zinc-700 text-zinc-400'}`
+                              : `text-left px-5 py-4 rounded-lg border-l-2 justify-between ${activeMarket === s.id ? 'bg-zinc-900 border-luxury-gold text-white shadow-lg' : 'border-transparent text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30'}`
+                          }
+                      `}
+                    >
+                      <div className="flex flex-col">
+                          {!isMobile && <span className="text-[10px] font-bold tracking-widest uppercase mb-1 opacity-70">{s.flag}</span>}
+                          <span className={isMobile ? "" : "text-sm font-bold"}>{s.title}</span>
+                      </div>
+                      {!isMobile && activeMarket === s.id && <ChevronRight size={14} className="text-luxury-gold" />}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Content */}
+                <div className={`flex-1 flex flex-col justify-center ${isMobile ? 'py-0' : 'py-6 overflow-hidden'}`}>
+                  <AnimatePresence mode='wait'>
+                    <motion.div
+                      key={activeMarket}
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="h-full flex flex-col"
+                    >
+                      <div className={`glass-panel rounded-2xl flex flex-col relative ${isMobile ? 'p-6 h-auto' : 'p-8 h-full overflow-y-auto custom-scrollbar'}`}>
+                        
+                        {/* Header */}
+                        <div className={`flex justify-between mb-6 border-b border-zinc-800 pb-4 ${isMobile ? 'flex-col gap-4' : 'flex-row items-end'}`}>
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="px-2 py-1 bg-luxury-gold/20 text-luxury-gold text-[10px] font-bold uppercase tracking-widest rounded">Archetype</span>
+                                    <span className="text-zinc-500 text-xs font-mono uppercase">{STRATEGIES[activeMarket].subtitle}</span>
+                                </div>
+                                <h3 className={`font-light text-white leading-tight ${isMobile ? 'text-2xl' : 'text-4xl'}`}>
+                                    {STRATEGIES[activeMarket].culturalUnlock}
+                                </h3>
+                            </div>
+                        </div>
+
+                        {/* Psychology */}
+                        <div className="mb-8 bg-zinc-900/50 p-4 md:p-6 rounded-lg border-l-2 border-zinc-700">
+                            <div className="flex items-center gap-2 mb-3 text-zinc-400">
+                                <Brain size={16} />
+                                <span className="text-xs font-bold uppercase tracking-widest">Psicología</span>
+                            </div>
+                            <p className="text-zinc-300 text-sm md:text-base leading-relaxed font-light">
+                                {STRATEGIES[activeMarket].psychology}
+                            </p>
+                        </div>
+
+                        {/* Grids */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-8">
+                            {/* Ecosystem */}
+                            <div className="bg-black/20 p-4 rounded-lg border border-zinc-800">
+                                <div className="flex items-center gap-2 mb-3 text-zinc-500">
+                                    <Layers size={14} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Ecosistema</span>
+                                </div>
+                                <ul className="space-y-2">
+                                    <li className="flex justify-between text-sm border-b border-zinc-800/50 pb-1"><span className="text-zinc-400">Canal 1</span><span className="text-white text-right">{STRATEGIES[activeMarket].platformEcology.primary}</span></li>
+                                    <li className="flex justify-between text-sm border-b border-zinc-800/50 pb-1"><span className="text-zinc-400">Canal 2</span><span className="text-white text-right">{STRATEGIES[activeMarket].platformEcology.secondary}</span></li>
+                                </ul>
+                            </div>
+
+                            {/* Growth */}
+                            <div className="bg-gradient-to-br from-zinc-900 to-black p-4 rounded-lg border border-luxury-gold/20">
+                                <div className="flex items-center gap-2 mb-3 text-luxury-gold">
+                                    <Zap size={14} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Hack</span>
+                                </div>
+                                <p className="text-white font-medium mb-2 text-sm">{STRATEGIES[activeMarket].growthHack}</p>
+                            </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        // --- EXPERIMENT DATA & COMPONENTS ---
+
+        const SCENARIOS = [
+          {
+            id: 'aumento',
+            title: 'Pedir Aumento',
+            tip: 'Tip: Usa silencios estratégicos.',
+            scripts: [
+              { tone: 'suave', text: 'Me gustaría revisar mi trayectoria y ajustar la compensación.' },
+              { tone: 'firme', text: 'Basado en resultados, necesitamos ajustar mi salario a mercado.' },
+              { tone: 'directa', text: 'He traído X resultados. Necesito igualar la cifra Y.' }
+            ]
+          },
+          {
+            id: 'limite',
+            title: 'Límites Familia',
+            tip: 'Tip: No justifiques tu decisión.',
+            scripts: [
+              { tone: 'suave', text: 'Prefiero manejar esto a mi manera. Gracias por el cariño.' },
+              { tone: 'firme', text: 'No voy a discutir este tema en la mesa.' },
+              { tone: 'directa', text: 'No. Les pido respetar mi decisión.' }
+            ]
+          }
+        ];
+
+        const GeneratorView = () => {
+          const [selectedScenario, setSelectedScenario] = useState(SCENARIOS[0]);
+          
+          return (
+            <div className="flex flex-col md:flex-row gap-8 h-full">
+              <div className="w-full md:w-1/3 space-y-2">
+                 {SCENARIOS.map(s => (
+                     <button key={s.id} onClick={() => setSelectedScenario(s)} className={`w-full text-left px-4 py-3 rounded border transition-all text-sm font-mono ${selectedScenario.id === s.id ? 'bg-zinc-800 border-zinc-600 text-white' : 'bg-transparent border-transparent text-zinc-500 hover:text-white'}`}>
+                         {s.title}
+                     </button>
+                 ))}
+                 <div className="mt-6 p-4 bg-zinc-900 rounded border border-luxury-gold/20 text-luxury-gold text-xs font-mono">
+                    {selectedScenario.tip}
+                 </div>
+              </div>
+              <div className="w-full md:w-2/3 space-y-4">
+                 {selectedScenario.scripts.map((script, idx) => (
+                     <div key={idx} className="p-4 bg-black border border-zinc-800 rounded hover:border-zinc-600 transition-colors group">
+                         <div className="flex justify-between mb-2">
+                             <span className={`text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded ${script.tone === 'suave' ? 'text-emerald-400 bg-emerald-900/20' : script.tone === 'firme' ? 'text-blue-400 bg-blue-900/20' : 'text-red-400 bg-red-900/20'}`}>{script.tone}</span>
+                         </div>
+                         <p className="text-zinc-300 text-sm font-light leading-relaxed">"{script.text}"</p>
+                     </div>
+                 ))}
+              </div>
+            </div>
+          );
+        };
+
+        const ThermometerView = () => {
+          const [value, setValue] = useState(50);
+          const info = value < 30 ? { t: "Pasivo", c: "text-blue-400" } : value > 70 ? { t: "Agresivo", c: "text-red-400" } : { t: "Bonito", c: "text-emerald-400" };
+          
+          return (
+            <div className="flex flex-col items-center justify-center h-full px-4 text-center w-full">
+              <div className={`text-xs font-mono uppercase tracking-[0.3em] mb-4 ${info.c}`}>{info.t} MODE</div>
+              
+              <div className="relative w-full max-w-lg mb-8">
+                <input 
+                  type="range" min="0" max="100" value={value} onChange={(e) => setValue(Number(e.target.value))}
+                  className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
+                />
+                <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-blue-900 via-emerald-900 to-red-900 -z-10 w-full rounded"></div>
+              </div>
+
+              <h3 className="text-xl md:text-2xl font-light text-white mb-6 min-h-[5rem] flex items-center">
+                "{value < 30 ? "Si no es mucha molestia..." : value > 70 ? "¡Págame ya!" : "Noté que la factura sigue pendiente."}"
+              </h3>
+            </div>
+          );
+        };
+
+        const ClinicView = () => {
+          const [isFixed, setIsFixed] = useState(false);
+          return (
+            <div className="flex flex-col items-center h-full w-full max-w-md mx-auto">
+              <div className="flex justify-center mb-6 gap-4">
+                <button onClick={() => setIsFixed(false)} className={`text-xs uppercase tracking-widest px-3 py-1 border-b-2 ${!isFixed ? 'border-white text-white' : 'border-transparent text-zinc-600'}`}>Raw</button>
+                <button onClick={() => setIsFixed(true)} className={`text-xs uppercase tracking-widest px-3 py-1 border-b-2 ${isFixed ? 'border-emerald-500 text-emerald-500' : 'border-transparent text-zinc-600'}`}>Luna Optimized</button>
+              </div>
+
+              <div className="w-full bg-zinc-900 rounded-lg border border-zinc-800 p-4 shadow-2xl">
+                  <div className="space-y-4 font-mono text-xs">
+                     <div className="bg-zinc-800 p-3 rounded-lg rounded-tl-none max-w-[80%] text-zinc-400">
+                        ¿Puedes entregar esto mañana?
+                     </div>
+                     <AnimatePresence mode="wait">
+                         {isFixed ? (
+                             <motion.div key="fixed" initial={{opacity:0, x:10}} animate={{opacity:1, x:0}} className="bg-emerald-900/20 border border-emerald-900/50 p-3 rounded-lg rounded-tr-none ml-auto max-w-[90%] text-emerald-100">
+                                Lo reviso a las 11am y te lo envío antes de comer. ¿Te funciona?
+                             </motion.div>
+                         ) : (
+                             <motion.div key="raw" initial={{opacity:0, x:10}} animate={{opacity:1, x:0}} className="bg-zinc-800 p-3 rounded-lg rounded-tr-none ml-auto max-w-[90%] text-zinc-300">
+                                Pff, siempre avisas tarde. Bueno, veré qué puedo hacer.
+                             </motion.div>
+                         )}
+                     </AnimatePresence>
+                  </div>
+              </div>
+            </div>
+          );
+        };
+
+        const ExperimentSlide = ({ isActive, isMobile }) => {
+          const [activeTab, setActiveTab] = useState('GENERATOR');
+
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-5xl w-full h-full flex flex-col">
+                
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 border border-zinc-700 rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 text-zinc-400">
+                    <Terminal size={12} /> Product Lab v1.0
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Prototipos</h2>
+                </div>
+
+                {/* Custom Tab Bar - Scrollable on Mobile */}
+                <div className="flex justify-start md:justify-center mb-8 border-b border-zinc-800 overflow-x-auto pb-1 no-scrollbar">
+                   {['GENERATOR', 'THERMOMETER', 'CLINIC'].map((tab) => (
+                     <button 
+                        key={tab}
+                        onClick={() => setActiveTab(tab)} 
+                        className={`px-6 py-3 text-xs font-bold uppercase tracking-widest transition-all relative whitespace-nowrap ${activeTab === tab ? 'text-white' : 'text-zinc-600 hover:text-zinc-400'}`}
+                     >
+                        {tab}
+                        {activeTab === tab && <motion.div layoutId="underline" className="absolute bottom-0 left-0 w-full h-[1px] bg-white" />}
+                     </button>
+                   ))}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 glass-panel rounded-lg border border-zinc-800/50 p-4 md:p-8 relative min-h-[400px]">
+                     <AnimatePresence mode='wait'>
+                        <motion.div key={activeTab} initial={{opacity: 0, scale: 0.95}} animate={{opacity: 1, scale: 1}} exit={{opacity: 0}} className="h-full w-full">
+                            {activeTab === 'GENERATOR' && <GeneratorView />}
+                            {activeTab === 'THERMOMETER' && <ThermometerView />}
+                            {activeTab === 'CLINIC' && <ClinicView />}
+                        </motion.div>
+                     </AnimatePresence>
+                </div>
+
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        const ClosingSlide = ({ isActive, isMobile }) => {
+          return (
+            <SlideContainer isActive={isActive} isMobile={isMobile}>
+              <div className="max-w-4xl text-center z-10 flex flex-col items-center">
+                
+                <div className="mb-12 text-luxury-gold animate-pulse opacity-80">
+                   <Feather size={48} strokeWidth={1} />
+                </div>
+
+                <h2 className="text-4xl md:text-7xl font-bold mb-10 leading-tight tracking-tighter">
+                  "Una negociación que transforma <br/>
+                  <span className="text-zinc-600">no es la que gana,</span> <br/>
+                  <span className="font-serif italic font-normal text-luxury-gold">es la que cuida.</span>"
+                </h2>
+
+                <div className="w-24 h-[1px] bg-zinc-800 mb-8"></div>
+
+                <p className="text-base md:text-xl font-light text-zinc-400 max-w-xl">
+                  Negociando Bonito no es solo un libro.<br/>
+                  <span className="text-white">Es un lenguaje compartido.</span>
+                </p>
+                
+                <div className="mt-20 flex flex-col items-center gap-2">
+                    <span className="text-[10px] tracking-[0.4em] uppercase text-zinc-600">Estrategia Roberto Luna</span>
+                    <span className="text-[10px] text-zinc-700 font-mono">2024 © Confidential</span>
+                </div>
+              </div>
+            </SlideContainer>
+          );
+        };
+
+        // --- APP ---
+
+        const SLIDES = [
+          IntroSlide,
+          BigIdeaSlide,
+          BrandSlide,
+          SystemSlide,
+          GlobalSlide,
+          ExperimentSlide,
+          ClosingSlide
+        ];
+
+        const App = () => {
+          const [currentSlide, setCurrentSlide] = useState(0);
+          const [isScrolling, setIsScrolling] = useState(false);
+          const isMobile = useIsMobile();
+
+          const nextSlide = () => {
+            if (currentSlide < SLIDES.length - 1) {
+              setCurrentSlide(prev => prev + 1);
+            }
+          };
+
+          const prevSlide = () => {
+            if (currentSlide > 0) {
+              setCurrentSlide(prev => prev - 1);
+            }
+          };
+
+          // Desktop Scroll Handler
+          useEffect(() => {
+            if (isMobile) return; // Disable custom scroll on mobile
+
+            const handleWheel = (e) => {
+              if (isScrolling) return;
+              
+              if (e.deltaY > 50) {
+                setIsScrolling(true);
+                nextSlide();
+                setTimeout(() => setIsScrolling(false), 800);
+              } else if (e.deltaY < -50) {
+                setIsScrolling(true);
+                prevSlide();
+                setTimeout(() => setIsScrolling(false), 800);
+              }
+            };
+
+            const handleKeyDown = (e) => {
+               if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                   nextSlide();
+               } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                   prevSlide();
+               }
+            };
+
+            window.addEventListener('wheel', handleWheel);
+            window.addEventListener('keydown', handleKeyDown);
+
+            return () => {
+              window.removeEventListener('wheel', handleWheel);
+              window.removeEventListener('keydown', handleKeyDown);
+            };
+          }, [currentSlide, isScrolling, isMobile]);
+
+          // --- MOBILE RENDER (Continuous Scroll) ---
+          if (isMobile) {
+              return (
+                <div className="relative w-full min-h-screen bg-luxury-black text-white overflow-y-auto">
+                    {SLIDES.map((SlideComponent, index) => (
+                        <SlideComponent
+                          key={index}
+                          isActive={true} // Always active on mobile
+                          isMobile={true}
+                          onNext={() => {}}
+                        />
+                    ))}
+                    <div className="py-8 text-center text-zinc-800 text-[10px]">END OF DECK</div>
+                </div>
+              );
+          }
+
+          // --- DESKTOP RENDER (Slide System) ---
+          return (
+            <div className="relative w-screen h-screen overflow-hidden bg-luxury-black text-white selection:bg-luxury-gold selection:text-black">
+              
+              {/* Slides */}
+              {SLIDES.map((SlideComponent, index) => (
+                <SlideComponent
+                  key={index}
+                  isActive={currentSlide === index}
+                  isMobile={false}
+                  onNext={nextSlide}
+                  onPrev={prevSlide}
+                />
+              ))}
+
+              {/* Navigation UI */}
+              <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-4">
+                {SLIDES.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all duration-500 border border-zinc-600 ${
+                      currentSlide === index 
+                        ? 'bg-white scale-150 border-white' 
+                        : 'bg-transparent hover:bg-zinc-700'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Progress Bar */}
+              <div className="fixed top-0 left-0 w-full h-[2px] bg-zinc-900 z-50">
+                <div 
+                  className="h-full bg-luxury-gold shadow-[0_0_10px_#d4af37] transition-all duration-500 ease-out"
+                  style={{ width: `${((currentSlide + 1) / SLIDES.length) * 100}%` }}
+                />
+              </div>
+
+            </div>
+          );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
